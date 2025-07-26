@@ -53,16 +53,10 @@
       "gatekeeperAssess": false
     },
     "win": {
-      "target": [
-        {
+      "target": {
           "target": "nsis",
           "arch": ["x64"]
         },
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
       "icon": "src/renderer/public/favicon.ico",
       "artifactName": "ShadowTorrent-Setup-${version}.exe"
     },
