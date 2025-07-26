@@ -304,7 +304,7 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
       default:
         break;
     }
-  }, [onPause, onResume, onRemove]);
+  }, [onResume]);
 
   const handleConfirmAction = useCallback((shouldDeleteFiles) => {
     if (!confirmDialog) return;
@@ -317,6 +317,9 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
         break;
       case 'remove':
         onRemove(torrent.infoHash, shouldDeleteFiles);
+        break;
+      default:
+        console.warn('Unknown action type:', type);
         break;
     }
     
