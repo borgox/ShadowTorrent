@@ -15,7 +15,12 @@
     "dev": "concurrently \"npm run start:renderer\" \"wait-on http://localhost:3000 && npm run start:main\"",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "postinstall": "cd src/renderer && npm install"
+    "postinstall": "cd src/renderer && npm install",
+    "test": "npm run test:main && npm run test:renderer",
+    "test:main": "jest src/main/__tests__",
+    "test:renderer": "cd src/renderer && npm test",
+    "lint": "eslint src/main/**/*.js",
+    "lint:fix": "eslint src/main/**/*.js --fix"
   },
   "build": {
     "appId": "com.shadowtorrent.app",
@@ -76,10 +81,16 @@
   "author": "ShadowTorrent Team",
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "babel-jest": "^29.7.0",
     "concurrently": "^7.6.0",
     "cross-env": "^7.0.3",
     "electron": "^22.0.0",
     "electron-builder": "^23.6.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
     "wait-on": "^8.0.4"
   },
   "dependencies": {
@@ -90,5 +101,23 @@
     "pretty-bytes": "^6.0.0",
     "webtorrent": "^2.0.0",
     "ws": "^8.12.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": [
+      "src/main/__tests__"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/?(*.)+(spec|test).js"
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "collectCoverageFrom": [
+      "src/main/**/*.js",
+      "!src/main/__tests__/**",
+      "!**/node_modules/**"
+    ]
   }
 }

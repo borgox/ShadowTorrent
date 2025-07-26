@@ -1,0 +1,28 @@
+{
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es6": true,
+    "node": true,
+    "jest": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-undef": "error"
+  },
+  "globals": {
+    "__dirname": "readonly",
+    "process": "readonly",
+    "require": "readonly",
+    "module": "readonly",
+    "exports": "readonly"
+  }
+}
