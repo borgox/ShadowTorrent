@@ -1,7 +1,7 @@
 {
   "name": "shadowtorrent",
   "version": "1.0.0",
-  "description": "A lightweight, privacy-focused torrent client with dark UI",
+  "description": "A high-performance, privacy-focused torrent client with optimized speeds and modern dark UI",
   "main": "src/main/main.js",
   "homepage": "./",
   "scripts": {

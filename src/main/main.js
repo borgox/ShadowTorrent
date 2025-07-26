@@ -38,15 +38,15 @@ if (isProduction) {
 const store = new Store({
   defaults: {
     downloadPath: app.getPath('downloads'),
-    maxConnections: 200,
+    maxConnections: 500, // Increased from 200 for better performance
     uploadLimit: 0,
     downloadLimit: 0,
     enableDHT: true,
     enableUTP: true,
     privacy: {
-      enablePEX: false,
-      enableLSD: false,
-      anonymousMode: true
+      enablePEX: true,  // Enable PEX for better peer discovery
+      enableLSD: true,  // Enable LSD for local peer discovery
+      anonymousMode: false // Disable anonymous mode for better performance
     },
     ui: {
       theme: 'dark',
@@ -72,28 +72,48 @@ async function initializeTorrentClient() {
   const settings = store.get();
   
   torrentClient = new WebTorrent({
-    maxConns: settings.maxConnections,
+    maxConns: settings.maxConnections, // Max peer connections
     dht: settings.enableDHT,
     lsd: settings.privacy.enableLSD,
     pex: settings.privacy.enablePEX,
     utp: settings.enableUTP,
+    
+    // Enhanced performance settings
+    downloadLimit: settings.downloadLimit > 0 ? settings.downloadLimit * 1024 : -1,
+    uploadLimit: settings.uploadLimit > 0 ? settings.uploadLimit * 1024 : -1,
+    
+    // Aggressive peer discovery
+    dhtOpts: {
+      bootstrap: [
+        'router.bittorrent.com:6881',
+        'dht.transmissionbt.com:6881',
+        'router.utorrent.com:6881'
+      ]
+    },
+    
     tracker: {
-      announce: settings.privacy.anonymousMode ? [] : undefined,
+      announce: settings.privacy.anonymousMode ? [] : [
+        'udp://tracker.opentrackr.org:1337',
+        'udp://tracker.leechers-paradise.org:6969',
+        'udp://9.rarbg.to:2710',
+        'udp://exodus.desync.com:6969',
+        'udp://tracker.cyberia.is:6969',
+        'udp://open.stealth.si:80',
+        'udp://retracker.lanta-net.ru:2710',
+        'udp://tracker.tiny-vps.com:6969',
+        'udp://tracker.torrent.eu.org:451'
+      ],
       getAnnounceOpts: () => ({
-        numwant: 50,
+        numwant: 200, // Request more peers (increased from 50)
         uploaded: 0,
-        downloaded: 0
+        downloaded: 0,
+        compact: 1
       })
-    }
+    },
+    
+    // WebRTC settings for better connectivity
+    webSeeds: true
   });
-
-  // Set up bandwidth limits
-  if (settings.uploadLimit > 0) {
-    torrentClient.throttleUpload(settings.uploadLimit * 1024);
-  }
-  if (settings.downloadLimit > 0) {
-    torrentClient.throttleDownload(settings.downloadLimit * 1024);
-  }
 
   // Client event handlers
   torrentClient.on('error', (err) => {
@@ -114,12 +134,41 @@ async function initializeTorrentClient() {
 
 // Set up handlers for individual torrents
 function setupTorrentHandlers(torrent) {
+  // Performance optimizations for individual torrents
+  torrent.maxWebConns = 10; // Max web seed connections
+  
+  torrent.on('wire', (wire) => {
+    // Optimize wire protocol
+    wire.setKeepAlive(true);
+    wire.setTimeout(30000); // 30 second timeout
+  });
+
   torrent.on('download', () => {
     sendTorrentUpdate();
-    saveTorrentState();
+    // Save state less frequently for better performance
+    if (Math.random() < 0.1) { // Only 10% of the time
+      saveTorrentState();
+    }
   });
 
   torrent.on('upload', () => {
+    sendTorrentUpdate();
+    // Save state less frequently for better performance
+    if (Math.random() < 0.1) { // Only 10% of the time
+      saveTorrentState();
+    }
+  });
+
+  torrent.on('ready', () => {
+    if (!isProduction) console.log(`Torrent ready: ${torrent.name} (${torrent.files.length} files)`);
+    
+    // Set higher priority for popular files
+    torrent.files.forEach((file, index) => {
+      if (file.length > 1024 * 1024) { // Files larger than 1MB
+        file.select(index); // Prioritize larger files
+      }
+    });
+    
     sendTorrentUpdate();
     saveTorrentState();
   });
@@ -399,7 +448,13 @@ ipcMain.handle('remove-torrent', async (event, infoHash, deleteFiles = false) =>
   try {
     const torrent = torrentClient.get(infoHash);
     if (torrent) {
-      torrent.destroy({ destroyStore: deleteFiles });
+      // WebTorrent destroy method
+      if (typeof torrent.destroy === 'function') {
+        torrent.destroy();
+      } else {
+        // Alternative method for removing torrent
+        torrentClient.remove(infoHash);
+      }
       saveTorrentState(); // Update persistence
       sendTorrentUpdate();
       return { success: true };
@@ -414,7 +469,13 @@ ipcMain.handle('pause-torrent', async (event, infoHash) => {
   try {
     const torrent = torrentClient.get(infoHash);
     if (torrent) {
-      torrent.pause();
+      if (typeof torrent.pause === 'function') {
+        torrent.pause();
+      } else {
+        // Alternative: set paused property
+        torrent.paused = true;
+      }
+      saveTorrentState(); // Update persistence
       sendTorrentUpdate();
       return { success: true };
     }
@@ -428,7 +489,13 @@ ipcMain.handle('resume-torrent', async (event, infoHash) => {
   try {
     const torrent = torrentClient.get(infoHash);
     if (torrent) {
-      torrent.resume();
+      if (typeof torrent.resume === 'function') {
+        torrent.resume();
+      } else {
+        // Alternative: set paused property
+        torrent.paused = false;
+      }
+      saveTorrentState(); // Update persistence
       sendTorrentUpdate();
       return { success: true };
     }

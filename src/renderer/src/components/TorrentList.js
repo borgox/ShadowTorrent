@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import prettyBytes from 'pretty-bytes';
 import { Header, HeaderTitle, ContentArea, EmptyState, EmptyStateIcon, EmptyStateTitle, EmptyStateText } from '../styles/AppStyles';
+import ConfirmDialog from './ConfirmDialog';
 
 const TorrentGrid = styled.div`
   display: flex;
@@ -219,8 +220,13 @@ const formatTimeRemaining = (seconds) => {
 };
 
 const formatSpeed = (bytes) => {
-  if (bytes === 0) return '0 B/s';
+  if (!bytes || bytes === 0) return '0 B/s';
   return `${prettyBytes(bytes)}/s`;
+};
+
+const formatBytes = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B';
+  return prettyBytes(bytes);
 };
 
 const getStatus = (torrent) => {
@@ -233,6 +239,8 @@ const getStatus = (torrent) => {
 
 const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => {
   const [contextMenu, setContextMenu] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [deleteFiles, setDeleteFiles] = useState(false);
 
   const handleContextMenu = useCallback((e, torrent) => {
     e.preventDefault();
@@ -250,16 +258,44 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
     
     switch (action) {
       case 'pause':
-        onPause(torrent.infoHash);
+        // Show confirmation for pause action
+        setConfirmDialog({
+          type: 'pause',
+          torrent,
+          title: 'Pause Torrent',
+          message: 'Are you sure you want to pause this torrent?',
+          confirmText: 'Pause',
+          danger: false
+        });
         break;
       case 'resume':
         onResume(torrent.infoHash);
         break;
       case 'remove':
-        onRemove(torrent.infoHash, false);
+        // Show confirmation for remove action
+        setDeleteFiles(false);
+        setConfirmDialog({
+          type: 'remove',
+          torrent,
+          title: 'Remove Torrent',
+          message: 'Are you sure you want to remove this torrent from the list?',
+          confirmText: 'Remove',
+          showDeleteFiles: true,
+          danger: true
+        });
         break;
       case 'removeWithFiles':
-        onRemove(torrent.infoHash, true);
+        // Direct remove with files (legacy - now handled by checkbox)
+        setDeleteFiles(true);
+        setConfirmDialog({
+          type: 'remove',
+          torrent,
+          title: 'Remove Torrent',
+          message: 'Are you sure you want to remove this torrent from the list?',
+          confirmText: 'Remove',
+          showDeleteFiles: true,
+          danger: true
+        });
         break;
       case 'openFolder':
         // Implementation would depend on your electron setup
@@ -269,6 +305,29 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
         break;
     }
   }, [onPause, onResume, onRemove]);
+
+  const handleConfirmAction = useCallback((shouldDeleteFiles) => {
+    if (!confirmDialog) return;
+
+    const { type, torrent } = confirmDialog;
+    
+    switch (type) {
+      case 'pause':
+        onPause(torrent.infoHash);
+        break;
+      case 'remove':
+        onRemove(torrent.infoHash, shouldDeleteFiles);
+        break;
+    }
+    
+    setConfirmDialog(null);
+    setDeleteFiles(false);
+  }, [confirmDialog, onPause, onRemove]);
+
+  const handleCloseDialog = useCallback(() => {
+    setConfirmDialog(null);
+    setDeleteFiles(false);
+  }, []);
 
   const handleClickOutside = useCallback((e) => {
     if (contextMenu) {
@@ -369,10 +428,10 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
                       {formatTimeRemaining(torrent.timeRemaining)}
                     </StatGroup>
                     <StatGroup>
-                      {prettyBytes(torrent.downloaded)} / {prettyBytes(torrent.length)}
+                      {formatBytes(torrent.downloaded)} / {formatBytes(torrent.length)}
                     </StatGroup>
                     <StatGroup>
-                      Ratio: {torrent.ratio.toFixed(2)}
+                      Ratio: {(torrent.ratio || 0).toFixed(2)}
                     </StatGroup>
                   </TorrentStats>
                 </TorrentInfo>
@@ -415,7 +474,16 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
                     className="danger"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRemove(torrent.infoHash, false);
+                      setDeleteFiles(false);
+                      setConfirmDialog({
+                        type: 'remove',
+                        torrent,
+                        title: 'Remove Torrent',
+                        message: 'Are you sure you want to remove this torrent from the list?',
+                        confirmText: 'Remove',
+                        showDeleteFiles: true,
+                        danger: true
+                      });
                     }}
                     title="Remove"
                   >
@@ -461,15 +529,22 @@ const TorrentList = ({ torrents, onRemove, onPause, onResume, currentView }) => 
             <Trash2 size={14} />
             Remove Torrent
           </ContextMenuItem>
-          <ContextMenuItem 
-            className="danger"
-            onClick={() => handleContextMenuAction('removeWithFiles', contextMenu.torrent)}
-          >
-            <Trash2 size={14} />
-            Remove with Files
-          </ContextMenuItem>
         </ContextMenu>
       )}
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={handleCloseDialog}
+        onConfirm={handleConfirmAction}
+        title={confirmDialog?.title}
+        message={confirmDialog?.message}
+        torrentName={confirmDialog?.torrent?.name}
+        showDeleteFiles={confirmDialog?.showDeleteFiles}
+        deleteFiles={deleteFiles}
+        onDeleteFilesChange={setDeleteFiles}
+        confirmText={confirmDialog?.confirmText}
+        danger={confirmDialog?.danger}
+      />
     </>
   );
 };

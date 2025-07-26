@@ -294,11 +294,15 @@ const Settings = ({ settings, onUpdateSettings }) => {
               <Label>Maximum Connections</Label>
               <Input
                 type="number"
-                value={localSettings.maxConnections || 200}
+                value={localSettings.maxConnections || 500}
                 onChange={(e) => updateSetting('maxConnections', parseInt(e.target.value))}
-                min="10"
-                max="1000"
+                min="50"
+                max="2000"
+                placeholder="500 (recommended for high speed)"
               />
+              <small style={{ color: '#888', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
+                Higher values = better performance but more CPU/RAM usage
+              </small>
             </FormGroup>
           </SettingsSection>
 
@@ -367,7 +371,7 @@ const Settings = ({ settings, onUpdateSettings }) => {
                   />
                   <CheckboxLabel>Anonymous Mode</CheckboxLabel>
                   <CheckboxDescription>
-                    Hide your client info from peers
+                    Hide your client info from peers (reduces performance)
                   </CheckboxDescription>
                 </CheckboxItem>
 
@@ -386,24 +390,24 @@ const Settings = ({ settings, onUpdateSettings }) => {
                 <CheckboxItem>
                   <Checkbox
                     type="checkbox"
-                    checked={localSettings.privacy?.enablePEX || false}
+                    checked={localSettings.privacy?.enablePEX !== false}
                     onChange={(e) => updateSetting('privacy.enablePEX', e.target.checked)}
                   />
-                  <CheckboxLabel>Enable PEX</CheckboxLabel>
+                  <CheckboxLabel>Enable PEX (Recommended)</CheckboxLabel>
                   <CheckboxDescription>
-                    Peer exchange protocol
+                    Peer exchange protocol - improves speed
                   </CheckboxDescription>
                 </CheckboxItem>
 
                 <CheckboxItem>
                   <Checkbox
                     type="checkbox"
-                    checked={localSettings.privacy?.enableLSD || false}
+                    checked={localSettings.privacy?.enableLSD !== false}
                     onChange={(e) => updateSetting('privacy.enableLSD', e.target.checked)}
                   />
-                  <CheckboxLabel>Enable LSD</CheckboxLabel>
+                  <CheckboxLabel>Enable LSD (Recommended)</CheckboxLabel>
                   <CheckboxDescription>
-                    Local service discovery
+                    Local service discovery - finds local peers faster
                   </CheckboxDescription>
                 </CheckboxItem>
 
