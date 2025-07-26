@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeTorrent: (infoHash, deleteFiles) => ipcRenderer.invoke('remove-torrent', infoHash, deleteFiles),
   pauseTorrent: (infoHash) => ipcRenderer.invoke('pause-torrent', infoHash),
   resumeTorrent: (infoHash) => ipcRenderer.invoke('resume-torrent', infoHash),
+  forceStopTorrent: (infoHash) => ipcRenderer.invoke('force-stop-torrent', infoHash),
   getTorrents: () => ipcRenderer.invoke('get-torrents'),
 
   // Settings

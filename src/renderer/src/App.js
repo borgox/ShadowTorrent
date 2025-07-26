@@ -215,6 +215,14 @@ function App() {
     }
   };
 
+  const handleForceStopTorrent = async (infoHash) => {
+    try {
+      await window.electronAPI.forceStopTorrent(infoHash);
+    } catch (error) {
+      console.error('Failed to force stop torrent:', error);
+    }
+  };
+
   const handleResumeTorrent = async (infoHash) => {
     try {
       await window.electronAPI.resumeTorrent(infoHash);
@@ -268,6 +276,7 @@ function App() {
                     torrents={filteredTorrents}
                     onRemove={handleRemoveTorrent}
                     onPause={handlePauseTorrent}
+                    onForceStop={handleForceStopTorrent}
                     onResume={handleResumeTorrent}
                     currentView={currentView}
                   />

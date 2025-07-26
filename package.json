@@ -1,6 +1,6 @@
 {
   "name": "shadowtorrent",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "A high-performance, privacy-focused torrent client with optimized speeds and modern dark UI",
   "main": "src/main/main.js",
   "homepage": "./",
@@ -53,11 +53,13 @@
       "gatekeeperAssess": false
     },
     "win": {
-      "target": {
+      "target": [
+        {
           "target": "nsis",
           "arch": ["x64"]
-        },
-      "icon": "src/renderer/public/favicon.ico",
+        }
+      ],
+      "icon": "src/renderer/public/favicon-256.png",
       "artifactName": "ShadowTorrent-Setup-${version}.exe"
     },
     "linux": {
@@ -69,9 +71,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ShadowTorrent",
-      "installerIcon": "src/renderer/public/favicon.ico",
-      "uninstallerIcon": "src/renderer/public/favicon.ico"
+      "shortcutName": "ShadowTorrent"
     }
   },
   "keywords": [

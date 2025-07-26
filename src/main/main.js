@@ -38,7 +38,7 @@ if (isProduction) {
 const store = new Store({
   defaults: {
     downloadPath: app.getPath('downloads'),
-    maxConnections: 500, // Increased from 200 for better performance
+    maxConnections: 800, // Increased from 500 for even better performance
     uploadLimit: 0,
     downloadLimit: 0,
     enableDHT: true,
@@ -87,24 +87,46 @@ async function initializeTorrentClient() {
       bootstrap: [
         'router.bittorrent.com:6881',
         'dht.transmissionbt.com:6881',
-        'router.utorrent.com:6881'
+        'router.utorrent.com:6881',
+        'dht.libtorrent.org:25401',
+        'router.silotis.us:6881'
       ]
     },
     
     tracker: {
       announce: settings.privacy.anonymousMode ? [] : [
-        'udp://tracker.opentrackr.org:1337',
-        'udp://tracker.leechers-paradise.org:6969',
-        'udp://9.rarbg.to:2710',
-        'udp://exodus.desync.com:6969',
-        'udp://tracker.cyberia.is:6969',
-        'udp://open.stealth.si:80',
-        'udp://retracker.lanta-net.ru:2710',
-        'udp://tracker.tiny-vps.com:6969',
-        'udp://tracker.torrent.eu.org:451'
+        // Tier 1 - Most reliable trackers
+        'udp://tracker.opentrackr.org:1337/announce',
+        'udp://open.stealth.si:80/announce',
+        'udp://tracker.tiny-vps.com:6969/announce',
+        'udp://fasttracker.foreverpirates.co:6969/announce',
+        
+        // Tier 2 - Additional reliable trackers
+        'udp://tracker.torrent.eu.org:451/announce',
+        'udp://explodie.org:6969/announce',
+        'udp://tracker.cyberia.is:6969/announce',
+        'udp://ipv4.tracker.harry.lu:80/announce',
+        'udp://tracker.uw0.xyz:6969/announce',
+        
+        // Tier 3 - Backup trackers
+        'udp://opentor.org:2710/announce',
+        'udp://tracker.dler.org:6969/announce',
+        'udp://exodus.desync.com:6969/announce',
+        'udp://movies.zsw.ca:6969/announce',
+        'udp://tracker1.bt.moack.co.kr:80/announce',
+        'udp://valakas.rollo.dnsabr.com:2710/announce',
+        'udp://tracker.zerobytes.xyz:1337/announce',
+        'udp://inferno.demonoid.is:3391/announce',
+        'udp://tracker.torrentbay.to:6969/announce',
+        'udp://tracker.therarbg.com:6969/announce',
+        
+        // HTTP/HTTPS trackers as fallback
+        'https://tracker.nanoha.org:443/announce',
+        'https://tracker.lilithraws.cf:443/announce',
+        'http://tracker.opentrackr.org:1337/announce'
       ],
       getAnnounceOpts: () => ({
-        numwant: 200, // Request more peers (increased from 50)
+        numwant: 300, // Request even more peers (increased from 200)
         uploaded: 0,
         downloaded: 0,
         compact: 1
@@ -112,7 +134,14 @@ async function initializeTorrentClient() {
     },
     
     // WebRTC settings for better connectivity
-    webSeeds: true
+    webSeeds: true,
+    
+    // More aggressive timeout settings
+    pieceTimeout: 30000, // 30 seconds
+    chunkTimeout: 10000,  // 10 seconds
+    
+    // Enable more advanced features
+    blocklist: null // Disable blocklist for maximum connectivity
   });
 
   // Client event handlers
@@ -135,12 +164,23 @@ async function initializeTorrentClient() {
 // Set up handlers for individual torrents
 function setupTorrentHandlers(torrent) {
   // Performance optimizations for individual torrents
-  torrent.maxWebConns = 10; // Max web seed connections
+  torrent.maxWebConns = 15; // Increased max web seed connections
+  
+  // More aggressive connection settings
+  torrent.strategy = 'sequential'; // Try sequential downloading for better streaming
   
   torrent.on('wire', (wire) => {
     // Optimize wire protocol
     wire.setKeepAlive(true);
-    wire.setTimeout(30000); // 30 second timeout
+    wire.setTimeout(60000); // Increased timeout to 60 seconds
+    
+    // Request more pieces at once for better throughput
+    wire.requests.maxLength = 250; // Increased from default
+    
+    // Enable extended messaging for better peer communication
+    if (wire.extended) {
+      wire.extended('ut_metadata', { msg_type: 0, piece: 0 });
+    }
   });
 
   torrent.on('download', () => {
@@ -427,9 +467,41 @@ ipcMain.handle('add-torrent', async (event, torrentId, options = {}) => {
   try {
     const downloadPath = options.path || store.get('downloadPath');
     
-    const torrent = torrentClient.add(torrentId, {
+    // Enhanced torrent options for better performance
+    const torrentOptions = {
       path: downloadPath,
+      maxWebConns: 15, // Max web seed connections
+      announce: [
+        // Add additional trackers to the torrent for better peer discovery
+        'udp://tracker.opentrackr.org:1337/announce',
+        'udp://open.stealth.si:80/announce',
+        'udp://tracker.tiny-vps.com:6969/announce',
+        'udp://fasttracker.foreverpirates.co:6969/announce',
+        'udp://tracker.torrent.eu.org:451/announce',
+        'udp://explodie.org:6969/announce',
+        'udp://tracker.cyberia.is:6969/announce',
+        'udp://ipv4.tracker.harry.lu:80/announce',
+        'udp://tracker.uw0.xyz:6969/announce',
+        'udp://opentor.org:2710/announce'
+      ],
+      // Force higher piece selection priority
+      strategy: 'sequential',
       ...options
+    };
+    
+    const torrent = torrentClient.add(torrentId, torrentOptions);
+    
+    // Immediately try to maximize connections
+    torrent.on('ready', () => {
+      // Force maximum peer connections for this torrent
+      if (torrent.discovery) {
+        torrent.discovery.setInterval(1000); // More frequent peer discovery
+      }
+      
+      // Select all files by default for faster overall completion
+      torrent.files.forEach((file, index) => {
+        file.select(index);
+      });
     });
 
     return {
@@ -448,19 +520,69 @@ ipcMain.handle('remove-torrent', async (event, infoHash, deleteFiles = false) =>
   try {
     const torrent = torrentClient.get(infoHash);
     if (torrent) {
-      // WebTorrent destroy method
-      if (typeof torrent.destroy === 'function') {
-        torrent.destroy();
-      } else {
-        // Alternative method for removing torrent
-        torrentClient.remove(infoHash);
+      // First pause the torrent to stop all activity
+      if (typeof torrent.pause === 'function') {
+        torrent.pause();
       }
+      
+      // Wait a moment for operations to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Properly destroy the torrent with callback
+      await new Promise((resolve, reject) => {
+        if (typeof torrent.destroy === 'function') {
+          torrent.destroy((err) => {
+            if (err) {
+              console.error('Error destroying torrent:', err);
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          // Fallback: remove from client
+          try {
+            torrentClient.remove(torrent);
+            resolve();
+          } catch (removeErr) {
+            reject(removeErr);
+          }
+        }
+      });
+      
+      // Optional: Delete files if requested
+      if (deleteFiles && torrent.files) {
+        const fs = require('fs').promises;
+        const path = require('path');
+        
+        try {
+          for (const file of torrent.files) {
+            const filePath = path.join(torrent.path, file.path);
+            try {
+              await fs.unlink(filePath);
+            } catch (fileErr) {
+              console.warn('Could not delete file:', filePath, fileErr.message);
+            }
+          }
+          
+          // Try to remove empty directory
+          try {
+            await fs.rmdir(path.join(torrent.path, torrent.name));
+          } catch (dirErr) {
+            // Directory might not be empty, that's okay
+          }
+        } catch (deleteErr) {
+          console.warn('Error deleting files:', deleteErr.message);
+        }
+      }
+      
       saveTorrentState(); // Update persistence
       sendTorrentUpdate();
       return { success: true };
     }
     return { success: false, error: 'Torrent not found' };
   } catch (error) {
+    console.error('Remove torrent error:', error);
     return { success: false, error: error.message };
   }
 });
@@ -471,6 +593,12 @@ ipcMain.handle('pause-torrent', async (event, infoHash) => {
     if (torrent) {
       if (typeof torrent.pause === 'function') {
         torrent.pause();
+        // Also close all peer connections
+        if (torrent.wires) {
+          torrent.wires.forEach(wire => {
+            if (wire.destroy) wire.destroy();
+          });
+        }
       } else {
         // Alternative: set paused property
         torrent.paused = true;
@@ -496,6 +624,49 @@ ipcMain.handle('resume-torrent', async (event, infoHash) => {
         torrent.paused = false;
       }
       saveTorrentState(); // Update persistence
+      sendTorrentUpdate();
+      return { success: true };
+    }
+    return { success: false, error: 'Torrent not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Force stop torrent - more aggressive than pause
+ipcMain.handle('force-stop-torrent', async (event, infoHash) => {
+  try {
+    const torrent = torrentClient.get(infoHash);
+    if (torrent) {
+      // First pause if available
+      if (typeof torrent.pause === 'function') {
+        torrent.pause();
+      }
+      
+      // Destroy all wire connections
+      if (torrent.wires) {
+        torrent.wires.forEach(wire => {
+          if (wire.destroy) {
+            wire.destroy();
+          }
+        });
+        torrent.wires.length = 0; // Clear the array
+      }
+      
+      // Stop all discovery
+      if (torrent.discovery) {
+        torrent.discovery.stop();
+      }
+      
+      // Clear any pending requests
+      if (torrent._selections) {
+        torrent._selections.clear();
+      }
+      
+      // Mark as paused
+      torrent.paused = true;
+      
+      saveTorrentState();
       sendTorrentUpdate();
       return { success: true };
     }
