@@ -9,6 +9,8 @@ on:
 permissions:
   contents: write
   actions: read
+  packages: write
+  id-token: write
 
 jobs:
   build-windows:
@@ -75,17 +77,25 @@ jobs:
           ### 📦 Windows Download
           - **Windows Installer**: Download the .exe file below
           
-          ### ⚡ Performance Features
-          - 3-4x faster download speeds compared to basic WebTorrent
-          - 500+ max connections for optimal peer discovery
-          - Enhanced tracker list with 9 high-performance trackers
-          - PEX + LSD enabled for better peer finding
-          - qBittorrent-style confirmation dialogs for safety
+          ### ⚡ Major Performance Improvements
+          - **800 max connections** (increased from 500) for maximum throughput  
+          - **20+ high-performance trackers** for faster peer discovery
+          - **Enhanced DHT bootstrap** with 5 reliable nodes
+          - **300 peer requests** per announce (up from 200)
+          - **Sequential downloading** strategy for better streaming
+          - **15 web seed connections** (up from 10) for hybrid downloads
+          
+          ### 🛠️ Torrent Management Fixes
+          - **Fixed torrent stopping** - no more stuck downloads
+          - **Proper remove torrent** with cleanup and file deletion
+          - **Force stop functionality** for aggressive torrent stopping
+          - **Enhanced pause/resume** with wire connection management
+          - **Better error handling** for all torrent operations
           
           ### 🛡️ Privacy & Security
           - Modern dark UI optimized for long sessions
           - Privacy-focused design with minimal telemetry
           - Confirmation dialogs prevent accidental deletions
-          - Built-in magnet link support
+          - Built-in magnet link support and drag-and-drop everywhere
       env:
-        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
