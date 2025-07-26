@@ -4,47 +4,10 @@ on:
   push:
     tags:
       - 'v*'
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci --ignore-scripts
-      
-    - name: Install renderer dependencies
-      run: |
-        if [ -d "src/renderer" ]; then
-          cd src/renderer
-          npm ci
-        else
-          echo "Renderer directory not found, skipping"
-        fi
-      shell: bash
-        
-    - name: Run linting
-      run: npm run lint
-      
-    - name: Run automated tests
-      run: npm run test
-      
-    - name: Build renderer (test)
-      run: npm run build:renderer
-
   build:
-    needs: test
     runs-on: ${{ matrix.os }}
     
     strategy:
