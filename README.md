@@ -2,7 +2,7 @@
 
 A lightweight, privacy-focused BitTorrent client built with Electron and React. Designed for speed, security, and user experience with a modern dark interface.
 
-![ShadowTorrent](https://img.shields.io/badge/version-1.0.0-blue)
+![ShadowTorrent](https://img.shields.io/badge/version-1.0.9-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
