@@ -15,10 +15,10 @@
     "dev": "concurrently \"npm run start:renderer\" \"wait-on http://localhost:3000 && npm run start:main\"",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "postinstall": "cd src/renderer && npm install",
+    "postinstall": "cd src/renderer && npm install || echo Renderer install skipped",
     "test": "npm run test:main && npm run test:renderer",
     "test:main": "jest src/main/__tests__",
-    "test:renderer": "cd src/renderer && npm test",
+    "test:renderer": "cd src/renderer && npm test -- --watchAll=false",
     "lint": "eslint src/main/**/*.js",
     "lint:fix": "eslint src/main/**/*.js --fix"
   },
@@ -56,11 +56,29 @@
       "gatekeeperAssess": false
     },
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
       "icon": "src/renderer/public/favicon.ico"
     },
     "linux": {
-      "target": "AppImage",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "tar.gz",
+          "arch": ["x64"]
+        }
+      ],
       "icon": "src/renderer/public/favicon.png"
     },
     "nsis": {
