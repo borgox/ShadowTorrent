@@ -56,7 +56,7 @@ A lightweight, privacy-focused BitTorrent client built with Electron and React. 
 
 1. **Clone and Install Dependencies**
    ```bash
-   git clone <repository-url>
+   git clone [<repository-url>](https://github.com/borgox/ShadowTorrent.git
    cd shadowtorrent
    npm install
    ```
