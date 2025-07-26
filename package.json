@@ -63,19 +63,11 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "src/renderer/public/favicon.ico"
+      "icon": "src/renderer/public/favicon.ico",
+      "artifactName": "ShadowTorrent-Setup-${version}.exe"
     },
     "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": ["x64"]
-        },
-        {
-          "target": "tar.gz",
-          "arch": ["x64"]
-        }
-      ],
+      "target": "AppImage",
       "icon": "src/renderer/public/favicon.png"
     },
     "nsis": {
@@ -83,7 +75,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ShadowTorrent"
+      "shortcutName": "ShadowTorrent",
+      "installerIcon": "src/renderer/public/favicon.ico",
+      "uninstallerIcon": "src/renderer/public/favicon.ico"
     }
   },
   "keywords": [
